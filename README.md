@@ -1,6 +1,6 @@
 # Crystal Interface Generative Adversarial Network (CryinGAN)
 
-CryinGAN is a generative adversarial network for generating periodic crystal structures, that was developed and tested on disordered interface structures.
+CryinGAN is a generative adversarial network for generating periodic crystal structures, that was developed using disordered interface structures.
 
 Despite its name, CryinGAN can accept any dataset of periodic structures as long as they have fixed lattice, composition, and number of atoms. 
 
@@ -22,6 +22,7 @@ Despite its name, CryinGAN can accept any dataset of periodic structures as long
 
 ## Table of Contents
 - [Prerequisites](#prerequisites)
+- [Datasets](#datasets)
 - [Usage](#usage)
   - [Input data](#input-data)
   - [Training CryinGAN](#training-cryingan)
@@ -33,11 +34,16 @@ Despite its name, CryinGAN can accept any dataset of periodic structures as long
 
 ## Prerequisites
 CryinGAN requires the following packages:
-- [PyTorch](http://pytorch.org)
-- [PyTorch3D](https://github.com/facebookresearch/pytorch3d/tree/main)
-- [ASE](https://wiki.fysik.dtu.dk/ase/)
+- [PyTorch](http://pytorch.org) = 1.13.0
+- [PyTorch3D](https://github.com/facebookresearch/pytorch3d/tree/main) = 0.7.4
+- [ASE](https://wiki.fysik.dtu.dk/ase/) = 3.22.1
+
+Note that these are only suggested package versions; other versions may also be compatible.
 
 To run CryinGAN using GPU, please make sure that PyTorch3D is installed with CUDA support, otherwise you'll get an error.
+
+## Datasets
+Datasets are available here [to be updated].
 
 ## Usage
 ### Input data
@@ -126,9 +132,9 @@ The following command-line arguments can be passed:
 ### Generating structures from a saved model
 To generate structures from a saved generator model, use the `generate_structures.py` script:
 ```
-python generate_structures.py --load_generator model_saves/generator_100 --n_struc 10 --ref_struc my_dataset.extxyz
+python generate_structures.py --load_generator model_saves/generator_100 --n_struc 1000 --ref_struc my_dataset.extxyz
 ```
-The number of structures to be generated is set using `n_struc`, and the structures are saved as POSCAR files to the `fake_structures` directory (default directory name).
+The number of structures to be generated is set using `n_struc`, and the structures are saved as a single extxyz file.
 
 The generator only generates coordinates so the remaining structural information is obtained from a reference structure. The training dataset or a single structure in .extxyz format will be sufficient (provide the path using `ref_struc` argument). 
 
@@ -153,4 +159,3 @@ Here is what an early experimental model of CryinGAN generated when it was going
   <img src="assets/CryinGAN_art.png" width="600"> 
 </p>
 
-We hope you'll have fun experimenting with CryinGAN :joy:
