@@ -43,7 +43,7 @@ Note that these are only suggested package versions; other versions may also be 
 To run CryinGAN using GPU, please make sure that PyTorch3D is installed with CUDA support, otherwise you'll get an error.
 
 ## Datasets
-Datasets are available here [to be updated].
+Datasets are available [here](https://doi.org/10.5281/zenodo.12710372).
 
 ## Usage
 ### Input data
@@ -144,7 +144,7 @@ If the `latent_dim` and/or `gen_channels_1` parameter(s) of your model is differ
 - Even if the Wasserstein distance plateaus, the generated structures can continue to improve. Generate some structures and see how they look.
 - If the generated structures do not look good, you may just need to train longer, or add more training data.
 - Start with the default learning rates, and do not use the learning rate decay at first (large `step_size` or `gamma=1`). Tune using constant learning rates before experimenting with learning rate decay.
-- If training with the bond distance discriminator, `weight_dist` is arguably the most important hyperparameter to tune.
+- If training with the bond distance discriminator, `weight_dist` is arguably the most important hyperparameter to tune (we suggest starting with 0.05).
 - In our case, we found that using larger values of `latent_dim` and `gen_channels_1` seemed to slow down training, but did not improve the quality of generated structures.
 - Using smaller `gen_int` will speed up training, but check the losses for signs of instability (spikes) if this value is too low.
 - Tuning `n_neighbors` did not seem to have a significant effect on results.
