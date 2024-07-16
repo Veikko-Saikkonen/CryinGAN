@@ -10,13 +10,14 @@ Despite its name, CryinGAN can accept any dataset of periodic structures as long
 
 ## Citation
 ```
-@misc{yong2024cryingan,
-      title={CryinGAN: Design and evaluation of point-cloud-based generative adversarial networks using disordered materials $-$ application to Li$_3$ScCl$_6$-LiCoO$_2$ battery interfaces}, 
-      author={Adrian Xiao Bin Yong and Elif Ertekin},
+@misc{yong2024dismaibench,
+      title={Dismai-Bench: Benchmarking and designing generative models using disordered materials and interfaces}, 
+      author={Adrian Xiao Bin Yong and Tianyu Su and Elif Ertekin},
       year={2024},
       eprint={2404.06734},
       archivePrefix={arXiv},
-      primaryClass={cond-mat.mtrl-sci}
+      primaryClass={cond-mat.mtrl-sci},
+      url={https://arxiv.org/abs/2404.06734}, 
 }
 ```
 
