@@ -3,6 +3,7 @@ from models import Generator
 from ase.io import read, write
 import argparse
 from tqdm import tqdm
+import numpy as np
 
 def main():
     parser = argparse.ArgumentParser()
@@ -31,7 +32,7 @@ def main():
     generator.eval()
     
     # Generate fake coordinates
-    z = torch.randn(args.n_struc, args.latent_dim)
+    z = torch.FloatTensor(np.random.normal(0,1,(args.n_struc, args.latent_dim)))
     fake_coords = generator(z).detach()
 
     # Save structures by replacing the coordinates of the structure template with the generated coordinates
