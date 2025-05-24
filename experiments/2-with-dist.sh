@@ -16,7 +16,7 @@ echo "Entering experiment ${EXPERIMENT_NAME}..."
 
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
-    bash create-venv.sh
+    bash experiments/create-venv.sh
 else
     echo "Virtual environment already exists. Activating it..."
     # Load custom module
