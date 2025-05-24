@@ -43,20 +43,35 @@ def calc_gradient_penalty(netD, real_data, fake_data, cuda):
     # Duplicates and expands alpha to the size of the real data 
     alpha = alpha.expand(batch_size, int(real_data.nelement()/batch_size)).contiguous().view(
             batch_size, 1, real_data.size(-2), real_data.size(-1))
-    alpha = alpha.cuda() if cuda else alpha
-
+    
+    # Move alpha to the GPU if available
+    if cuda:
+        alpha = alpha.cuda()
+    elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        # Move alpha to the MPS device
+        alpha = alpha.to(torch.device("mps"))
+    # Interpolates between real and fake data
     interpolates = alpha * real_data + ((1 - alpha) * fake_data)
 
     if cuda:
         interpolates = interpolates.cuda()
+    elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        # Move interpolates to the MPS device
+        interpolates = interpolates.to(torch.device("mps"))
     interpolates = autograd.Variable(interpolates, requires_grad=True)
 
     feature, disc_interpolates = netD(interpolates)
 
+    grad_outputs = torch.ones(disc_interpolates.size())
+    if cuda:
+        grad_outputs = grad_outputs.cuda()
+    elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        # Move grad_outputs to the MPS device
+        grad_outputs = grad_outputs.to(torch.device("mps"))
+
     # Calculate the sum of gradients of outputs with respect to the inputs
     gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
-                              grad_outputs=torch.ones(disc_interpolates.size()).cuda() if cuda else torch.ones(
-                                  disc_interpolates.size()),
+                              grad_outputs=grad_outputs,
                               create_graph=True, retain_graph=True, only_inputs=True)[0]
     gradients = gradients.view(gradients.size(0), -1)
 
@@ -112,7 +127,11 @@ def main():
     
     ## Determine whether to use GPU
     cuda = not args.disable_cuda and torch.cuda.is_available()
+
+    mps = not args.disable_cuda and torch.backends.mps.is_available() and torch.backends.mps.is_built()
+
     print('cuda is', cuda)
+    print('mps is', mps)
     
     ## Initialize best distance and starting epoch
     best_distance = 1e10
@@ -126,7 +145,17 @@ def main():
 
     ## Read and prepare training data
     print("Reading training data...")
-    ase_atoms = read(args.training_data, index=':', format='extxyz')
+    ase_atoms = []
+    if os.path.isdir(args.training_data):
+        for root, _, files in os.walk(args.training_data):
+            print("Reading folder: ", root)
+            for file in files:
+                if file.endswith('.extxyz'):
+                    file_path = os.path.join(root, file)
+                    ase_atoms.extend(read(file_path, index=':', format='extxyz'))
+    else:
+        print("Reading file: ", args.training_data)
+        ase_atoms = read(args.training_data, index=':', format='extxyz')
     #lattice = ase_atoms[0].get_cell()[:]   # Lattice vectors, array of shape (3,3)
     n_atoms_total = len(ase_atoms[0])   # Total number of atoms in each structure
     _, idx, n_atoms_elements = np.unique(ase_atoms[0].numbers, return_index=True, return_counts=True)
@@ -149,6 +178,10 @@ def main():
     if cuda:
         generator.cuda()
         coord_disc.cuda()
+    
+    if mps:
+        generator.to(device='mps')
+        coord_disc.to(device='mps')
 
 	## Optimizers
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=args.g_lr, betas=(args.b1, args.b2))
@@ -210,6 +243,8 @@ def main():
             current_batch_size = real_coords.shape[0] 
             if cuda:
                 real_coords = real_coords.cuda()
+            if mps:
+                real_coords = real_coords.to(device='mps')
             
             ## Feed real coordinates into Coordinate Discriminator
             real_feature, D_real = coord_disc(real_coords) # real_feature is tensor of (current_batch_size, 200). D_real is the real_feature fed into linear layer to reduce from 200 to 10 values.
@@ -220,6 +255,8 @@ def main():
             z = torch.FloatTensor(np.random.normal(0,1,(current_batch_size, args.latent_dim)))   # torch.Size([current_batch_size, args.latent_dim])
             if cuda :
                 z = z.cuda()  
+            if mps:
+                z = z.to(device='mps')
             ## Feed fake coordinates into Coordinate Discriminator
             fake_coords = generator(z)   # size is (current_batch_size, 1, n_atoms_total, 3)
             fake_feature, D_fake = coord_disc(fake_coords.detach())  # fake feature has size (current_batch_size, 200), D_fake has size (current_batch_size, 10)
@@ -228,7 +265,9 @@ def main():
 
             ## Compute gradient and do optimizer step. Save losses. 
             optimizer_CD.zero_grad()
-            
+
+            # Print devices
+
             gradient_penalty_D = calc_gradient_penalty(coord_disc, real_coords, fake_coords, cuda)
             
             D_cost = D_fake - D_real + gradient_penalty_D
@@ -242,7 +281,6 @@ def main():
             
             optimizer_CD.step()
             
-            
             ## Train Generator every "gen_int" batches with new noise z
             if i % args.gen_int == 0 :		
                 for p in coord_disc.parameters():
@@ -253,6 +291,8 @@ def main():
                 z = torch.FloatTensor(np.random.normal(0,1,(current_batch_size, args.latent_dim)))
                 if cuda :
                     z = z.cuda()
+                if mps:
+                    z = z.to(device='mps')
                 fake_coords = generator(z)   # size is (current_batch_size, 1, n_atoms_total, 3)
                 ## Feed fake coordinates into Coordinate Discriminator
                 fake_feature_G, D_fake_G = coord_disc(fake_coords)
@@ -278,7 +318,7 @@ def main():
                     epoch, i, len(dataloader)-1, batch_time=batch_time,
                     w_dis=w_dis, mem_used=torch.cuda.max_memory_allocated()/2**30, 
                     mem_res=torch.cuda.max_memory_reserved()/2**30)
-                    )
+                )
 
             ## Store the fake coordinates that were generated. Only saves up to "n_save" fake structures. 
             n_save = args.n_save   # Maximum number of fake structures to save
@@ -331,14 +371,14 @@ def main():
             np.save(gen_name, gen_file)
         
         ## Write losses and learning rate files
-        with open("losses.csv", "a", newline='') as csvfile: 
+        with open(args.msave_dir+"losses.csv", "a", newline='') as csvfile: 
             csvwriter = csv.writer(csvfile)
             if epoch == 0:
                 csvwriter.writerow(['epoch', 'distance_dis', 'cost_dis', 'cost_gen',
                                     'D_real', 'D_fake'])
             csvwriter.writerow([epoch, w_dis.avg, cost_dis.avg, cost_gen.avg,
                                 meter_D_real.avg, meter_D_fake.avg])
-        with open("learning_rate.csv", "a", newline='') as csvfile: 
+        with open(args.msave_dir+"learning_rate.csv", "a", newline='') as csvfile: 
             csvwriter = csv.writer(csvfile)
             if epoch == 0:
                 csvwriter.writerow(['epoch', 'generator_lr', 'coord_disc_lr'])
@@ -347,8 +387,8 @@ def main():
         
         # CSV files to be used when restarting training from last saved model
         if epoch % args.msave_freq == 0:
-            shutil.copyfile('losses.csv', 'losses_cp.csv')
-            shutil.copyfile('learning_rate.csv', 'learning_rate_cp.csv')
+            shutil.copyfile(args.msave_dir+'losses.csv', args.msave_dir+'losses_cp.csv')
+            shutil.copyfile(args.msave_dir+'learning_rate.csv', args.msave_dir+'learning_rate_cp.csv')
  
 
 if  __name__ == '__main__':

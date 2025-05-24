@@ -44,7 +44,12 @@ def calc_gradient_penalty(netD, real_data, fake_data, cuda):
     # Duplicates and expands alpha to the size of the real data 
     alpha = alpha.expand(batch_size, int(real_data.nelement()/batch_size)).contiguous().view(
             batch_size, 1, real_data.size(-2), real_data.size(-1))
-    alpha = alpha.cuda() if cuda else alpha
+    
+    if cuda:
+        alpha = alpha.cuda() if cuda else alpha
+    elif torch.backends.mps.is_available():
+        alpha = alpha.to(torch.device("mps"))
+    # Interpolates between real and fake data
 
     interpolates = alpha * real_data + ((1 - alpha) * fake_data)
 
@@ -131,7 +136,16 @@ def main():
 
     ## Read and prepare training data
     print("Reading training data...")
-    ase_atoms = read(args.training_data, index=':', format='extxyz')
+    ase_atoms = []
+    if os.path.isdir(args.training_data):
+        for root, _, files in os.walk(args.training_data):
+            print("Reading folder: ", root)
+            for file in files:
+                if file.endswith('.extxyz'):
+                    file_path = os.path.join(root, file)
+                    ase_atoms.extend(read(file_path, index=':', format='extxyz'))
+    else:
+        ase_atoms = read(args.training_data, index=':', format='extxyz')
     lattice = ase_atoms[0].get_cell()[:]   # Lattice vectors, array of shape (3,3)
     n_atoms_total = len(ase_atoms[0])   # Total number of atoms in each structure
     _, idx, n_atoms_elements = np.unique(ase_atoms[0].numbers, return_index=True, return_counts=True)
