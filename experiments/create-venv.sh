@@ -1,7 +1,7 @@
 #!/bin/bash -l
-#SBATCH --job-name=ccgan-create-venv
-#SBATCH --output=ccgan-create-venv.out
-#SBATCH --error=ccgan-create-venv.err
+#SBATCH --job-name=cryingan-create-venv
+#SBATCH --output=cryingan-create-venv.out
+#SBATCH --error=cryingan-create-venv.err
 #SBATCH --account=project_2010169
 #SBATCH --partition=small
 #SBATCH --time=00:15:00
