@@ -21,7 +21,12 @@ def main():
     # Load generator
     generator = Generator(args, n_atoms_total)
     print("Loading generator...")
-    generator.load_state_dict(torch.load(args.load_generator, map_location=torch.device("cpu") if not torch.cuda.is_available() else None))
+    if torch.cuda.is_available():
+        generator.load_state_dict(torch.load(args.load_generator, map_location=torch.device("cpu") if not torch.cuda.is_available() else None))
+    elif torch.backends.mps.is_available():
+        generator.load_state_dict(torch.load(args.load_generator, map_location=torch.device("mps")))
+    else:
+        generator.load_state_dict(torch.load(args.load_generator, map_location=torch.device("cpu")))
     print("=> Loaded '{}'.".format(args.load_generator))
     generator.eval()
     
