@@ -2,9 +2,10 @@ torch==2.2.1
 torchvision==0.17.1
 ase==3.24.0
 numpy==1.26.4
-pytorch3d==0.7.8
 pandas
 seaborn
+scikit-learn
 matplotlib
 tqdm
 torchinfo
+fvcore
